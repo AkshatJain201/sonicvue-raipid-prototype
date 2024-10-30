@@ -9,11 +9,22 @@ import {
   ListItemIcon, 
   ListItemText,
   Paper,
-  Snackbar
+  Snackbar,
+  Card, 
+  CardContent, 
+  CardActions, 
+  Grid,
+  Tooltip,
+  IconButton,
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions,
 } from '@mui/material';
-import { CloudUpload as CloudUploadIcon, AudioFile as AudioFileIcon } from '@mui/icons-material';
+import { CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon, AudioFile as AudioFileIcon, Description as DescriptionIcon, GetApp as GetAppIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
+import { jsPDF } from 'jspdf';
 
 const UploadPage: React.FC = () => {
   const [files, setFiles] = useState<File[]>([]);
@@ -21,11 +32,40 @@ const UploadPage: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [transcripts, setTranscripts] = useState([]);
   const [error, setError] = useState<string | null>(null);
+  const [openTranscriptDialog, setOpenTranscriptDialog] = useState(false);
+  const [selectedTranscript, setSelectedTranscript] = useState<string>('');
 
-  const showTranscript = (transcript : String) => {
-    alert(transcript);
+  const showTranscript = (transcript: string) => {
+    setSelectedTranscript(transcript);
+    setOpenTranscriptDialog(true);
   };
 
+  // const downloadTranscriptAsPdf = async (transcript: string, filename: string) => {
+  //   const element = document.createElement("a");
+  //   const file = new Blob([transcript], {type: 'text/plain'});
+  //   element.href = URL.createObjectURL(file);
+  //   element.download = `${filename.split('.')[0]}_transcript.txt`;
+  //   document.body.appendChild(element);
+  //   element.click();
+  //   document.body.removeChild(element);
+  // };
+  
+  const downloadTranscriptAsPdf = async (transcript: string, filename: string) => {
+    const doc = new jsPDF();
+    
+    // Split text into lines to fit page width
+    const lines = doc.splitTextToSize(transcript, 180);
+    
+    doc.text(lines, 15, 15);
+    doc.save(`${filename.split('.')[0]}_transcript.pdf`);
+  };
+
+  const downloadAllTranscripts = async (transcripts: any[]) => {
+    transcripts.forEach(item => {
+      downloadTranscriptAsPdf(item.transcript, item.filename);
+    });
+  };
+  // Dropzone
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (files.length + acceptedFiles.length > 5) {
       setError('You can only upload up to 5 files at a time.');
@@ -144,7 +184,7 @@ const UploadPage: React.FC = () => {
         </Box>
       )}
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+      {/* <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
         <Button
           variant="contained"
           color="primary"
@@ -153,35 +193,113 @@ const UploadPage: React.FC = () => {
         >
           {uploading ? 'Uploading...' : 'Upload Files'}
         </Button>
+      </Box> */}
+      
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Button
           variant="contained"
-          color="secondary"
-          disabled={files.length === 0}
+          color="primary"
+          onClick={handleUpload}
+          disabled={uploading || files.length === 0}
+          // startIcon={<CloudUploadIcon />}
         >
-          Generate Transcript
+          {uploading ? 'Uploading...' : 'Upload Files'}
         </Button>
+        
+        {transcripts.length > 0 && (
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={() => downloadAllTranscripts(transcripts)}
+            startIcon={<CloudDownloadIcon />}
+          >
+            Download All Transcripts
+          </Button>
+        )}
       </Box>
-      {/* <div> */}
-        {/* {transcripts.map((item : any) => ( */}
-          {/* <div key={item.filename}> */}
-            {/* <p>{item.filename}</p> */}
-            {/* <button onClick={() => showTranscript(item.transcript)}>Show Transcript</button> */}
-            {/* <button onClick={() => uploadTranscript(item.transcript_file)}>Upload Transcript</button> */}
-          {/* </div> */}
-        {/* ))} */}
-      {/* </div> */}
 
-      <div>
-        <h1>Uploaded Transcripts</h1>
-        <div>
-          {transcripts.map((item : any) => (
-            <div key={item.filename}>
-              <p>{item.filename}</p>
-              <button onClick={() => showTranscript(item.transcript)}>Show Transcript</button>
-            </div>
-          ))}
-        </div>
-      </div>
+      {transcripts.length > 0 && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: 'purple' }}>
+            Generated Transcripts
+          </Typography>
+          <Grid container spacing={3}>
+            {transcripts.map((item: any) => (
+              <Grid item xs={12} sm={6} md={4} key={item.filename}>
+                <Card sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  '&:hover': { boxShadow: 6 }
+                }}>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" gutterBottom>
+                      {item.filename}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" noWrap>
+                      {item.transcript.substring(0, 100)}...
+                    </Typography>
+                  </CardContent>
+                  <CardActions>
+
+                    <Tooltip title="View Transcript">
+                      <IconButton 
+                        color="primary" 
+                        onClick={() => showTranscript(item.transcript)}
+                      >
+                        <DescriptionIcon />
+                      </IconButton>
+                    </Tooltip>
+                  
+                    <Dialog 
+                      open={openTranscriptDialog} 
+                      onClose={() => setOpenTranscriptDialog(false)}
+                      maxWidth="md"
+                      fullWidth
+                    >
+                      <DialogTitle sx={{ m: 0, p: 2 }}>
+                        Transcript
+                        <IconButton
+                          aria-label="close"
+                          onClick={() => setOpenTranscriptDialog(false)}
+                          sx={{
+                            position: 'absolute',
+                            right: 8,
+                            top: 8,
+                            color: (theme) => theme.palette.grey[500],
+                          }}
+                        >
+                          <CloseIcon />
+                        </IconButton>
+                      </DialogTitle>
+                      <DialogContent dividers>
+                        <Typography>
+                          {selectedTranscript}
+                        </Typography>
+                      </DialogContent>
+                      <DialogActions>
+                        <Button onClick={() => setOpenTranscriptDialog(false)}>
+                          Close
+                        </Button>
+                      </DialogActions>
+                    </Dialog>
+
+                    <Tooltip title="Download Transcript">
+                      <IconButton 
+                        color="secondary"
+                        onClick={() => downloadTranscriptAsPdf(item.transcript, item.filename)}
+                      >
+                        <GetAppIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      )}
+
       <Snackbar
         open={!!error}
         autoHideDuration={6000}
