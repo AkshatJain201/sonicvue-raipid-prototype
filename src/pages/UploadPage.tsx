@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Box,
   Typography,
   Button,
+  CircularProgress,
   Menu,
   MenuItem,
   Paper,
@@ -38,18 +39,19 @@ import {
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
+import DialogContentComponent from '../components/DialogContent';
 
 interface FileUpload {
   file: File;
   progress: number;
-  status: 'pending' | 'uploading' | 'success' | 'error';
-}
+  status: 'pending' | 'uploading' | 'success' | 'error' | 'processing';
+} 
 
 interface TranscriptResponse {
   filename: string;
   transcript: string | null;
   transcript_file: string;
-  status: 'processing' | 'completed';
+  status: 'processing' | 'completed' | 'error';
 }
 
 export default function UploadPage() {
@@ -59,6 +61,7 @@ export default function UploadPage() {
   const [showTranscripts, setShowTranscripts] = useState(false);
   const [openTranscriptDialog, setOpenTranscriptDialog] = useState(false);
   const [selectedTranscript, setSelectedTranscript] = useState('');
+  const [loadingTranscripts, setLoadingTranscripts] = useState(false);
   const [open, setOpen] = useState(false);
   const [alert, setAlert] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
@@ -192,7 +195,7 @@ export default function UploadPage() {
   const handleGenerateTranscripts = async () => {
     try {
       const uploadedFiles = files.filter(f => f.status === 'success').map(f => f.file.name);
-      // console.log(uploadedFiles);
+      setLoadingTranscripts(true);
       const response = await axios.get('http://localhost:8000/generate_transcripts', {
         params: {
           files: uploadedFiles.join(',')
@@ -207,8 +210,12 @@ export default function UploadPage() {
         message: 'Error generating transcripts. Please try again.',
         type: 'error'
       });
+    } finally {
+      setLoadingTranscripts(false);
     }
   };
+
+  const isGenerateButtonDisabled = files.some(file => file.status === 'uploading' || file.status === 'processing');
 
   const removeFile = (fileToRemove: File) => {
     setFiles(prev => prev.filter(f => f.file !== fileToRemove));
@@ -432,7 +439,7 @@ export default function UploadPage() {
         <Button
           variant="contained"
           onClick={handleUpload}
-          disabled={!files.some(f => f.status === 'pending')}
+          disabled={!files.some(f => f.status === 'pending' || f.status==='uploading')}
           sx = {{backgroundColor: '#6800E0'}}
         >
           Upload Files
@@ -440,70 +447,13 @@ export default function UploadPage() {
         <Button
           variant="contained"
           onClick={handleGenerateTranscripts}
-          disabled={!files.some(f => f.status === 'success')}
+          disabled={files.some(f => f.status === 'uploading' || f.status === 'processing') || loadingTranscripts} // Disable while generating
           sx = {{backgroundColor: '#6800E0'}}
         >
-          Generate Transcript
+          {loadingTranscripts ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Generate Transcripts'}
         </Button>
       </Box>
-
-      {/* <Dialog open={showTranscripts} onClose={() => setShowTranscripts(false)}>
-        <DialogTitle>Transcripts</DialogTitle>
-        <DialogContent>
-          <List>
-            {transcripts.map((transcript, index) => (
-              <ListItem key={index}>
-                <ListItemIcon>
-                  <AudioFile />
-                </ListItemIcon>
-                <ListItemText 
-                  primary={transcript.filename}
-                  secondary={transcript.status}
-                />
-                {transcript.status === 'completed' && transcript.transcript && (
-                  <Button
-                    variant="outlined"
-                    startIcon={<Download />}
-                    onClick={() => {
-                      const blob = new Blob([transcript.transcript || ''], {type: 'text/plain'});
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = transcript.transcript_file;
-                      a.click();
-                    }}
-                  >
-                    Download
-                  </Button>
-                )}
-              </ListItem>
-            ))}
-          </List>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowTranscripts(false)}>Close</Button>
-          <Button
-            variant="contained"
-            startIcon={<Download />}
-            disabled={!transcripts.some(t => t.status === 'completed')}
-            onClick={() => {
-              transcripts.forEach(transcript => {
-                if (transcript.status === 'completed' && transcript.transcript) {
-                  const blob = new Blob([transcript.transcript], {type: 'text/plain'});
-                  const url = window.URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = transcript.transcript_file;
-                  a.click();
-                }
-              });
-            }}
-          >
-            Download All
-          </Button>
-        </DialogActions>
-      </Dialog> */}
-
+      
       {transcripts.length > 0 && (
         <Box sx={{ mt: 4 }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -605,9 +555,16 @@ export default function UploadPage() {
               </IconButton>
             </DialogTitle>
             <DialogContent dividers>
-              <Typography>
+              {/* <Typography>
                 {selectedTranscript}
-              </Typography>
+              </Typography> */}
+              {/* <Typography
+                component="div"
+                dangerouslySetInnerHTML={{
+                  __html: selectedTranscript.replace(/\n/g, '<br />'),
+                }}
+              /> */}
+              <DialogContentComponent selectedTranscript={selectedTranscript}/>
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenTranscriptDialog(false)}>
