@@ -138,59 +138,122 @@ export default function UploadPage() {
     noClick: true,
   });
 
+  // const handleUpload = async () => {
+  //   const pendingFiles = files.filter(f => f.status === 'pending');
+  //   console.log(files)
+  //   for (const fileUpload of pendingFiles) {
+  //     const formData = new FormData();
+  //     formData.append('files', fileUpload.file);
+  //     console.log(formData);
+  //     try {
+  //       setFiles(prev => prev.map(f =>
+  //         f.file === fileUpload.file
+  //           ? { ...f, status: 'uploading' }
+  //           : f
+  //       ));
+
+  //       const response = await axios.post('http://localhost:8000/upload', formData, {
+  //         onUploadProgress: (progressEvent) => {
+  //           if (progressEvent.total) {
+  //             const progress = (progressEvent.loaded / progressEvent.total) * 100;
+  //             setFiles(prev => prev.map(f => 
+  //               f.file === fileUpload.file 
+  //                 ? { ...f, progress: Math.round(progress) }
+  //                 : f
+  //             ));
+  //           }
+  //         },
+  //       });
+
+  //       setFiles(prev => prev.map(f =>
+  //         f.file === fileUpload.file
+  //           ? { ...f, status: 'success' }
+  //           : f
+  //       ));
+
+  //       setAlert({
+  //         show: true,
+  //         message: 'File uploaded successfully!',
+  //         type: 'success'
+  //       });
+  //     } catch (error) {
+  //       setFiles(prev => prev.map(f =>
+  //         f.file === fileUpload.file
+  //           ? { ...f, status: 'error' }
+  //           : f
+  //       ));
+
+  //       setAlert({
+  //         show: true,
+  //         message: 'Error uploading file. Please try again.',
+  //         type: 'error'
+  //       });
+  //     }
+  //   }
+  // };
+
   const handleUpload = async () => {
     const pendingFiles = files.filter(f => f.status === 'pending');
-    
-    for (const fileUpload of pendingFiles) {
-      const formData = new FormData();
+    console.log(files);
+  
+    // Create a new FormData object to send all files in one request
+    const formData = new FormData();
+  
+    // Append all pending files to the form data
+    pendingFiles.forEach(fileUpload => {
       formData.append('files', fileUpload.file);
-
-      try {
-        setFiles(prev => prev.map(f =>
-          f.file === fileUpload.file
-            ? { ...f, status: 'uploading' }
-            : f
-        ));
-
-        const response = await axios.post('http://localhost:8000/upload', formData, {
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const progress = (progressEvent.loaded / progressEvent.total) * 100;
-              setFiles(prev => prev.map(f => 
-                f.file === fileUpload.file 
-                  ? { ...f, progress: Math.round(progress) }
-                  : f
-              ));
-            }
-          },
-        });
-
-        setFiles(prev => prev.map(f =>
-          f.file === fileUpload.file
-            ? { ...f, status: 'success' }
-            : f
-        ));
-
-        setAlert({
-          show: true,
-          message: 'File uploaded successfully!',
-          type: 'success'
-        });
-      } catch (error) {
-        setFiles(prev => prev.map(f =>
-          f.file === fileUpload.file
-            ? { ...f, status: 'error' }
-            : f
-        ));
-
-        setAlert({
-          show: true,
-          message: 'Error uploading file. Please try again.',
-          type: 'error'
-        });
-      }
+    });
+  
+    // Start updating the status for all files to 'uploading'
+    setFiles(prev => prev.map(f =>
+      f.status === 'pending'
+        ? { ...f, status: 'uploading' }
+        : f
+    ));
+  
+    try {
+      // Send the FormData to the backend as a single request
+      const response = await axios.post('http://localhost:8000/upload', formData, {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = (progressEvent.loaded / progressEvent.total) * 100;
+            setFiles(prev => prev.map(f =>
+              f.status === 'uploading'
+                ? { ...f, progress: Math.round(progress) }
+                : f
+            ));
+          }
+        },
+      });
+  
+      // Update the status of all files to 'success' after upload
+      setFiles(prev => prev.map(f =>
+        f.status === 'uploading'
+          ? { ...f, status: 'success' }
+          : f
+      ));
+  
+      setAlert({
+        show: true,
+        message: 'Files uploaded successfully!',
+        type: 'success'
+      });
+    } catch (error) {
+      // Update status for all files to 'error' if there's any failure
+      setFiles(prev => prev.map(f =>
+        f.status === 'uploading'
+          ? { ...f, status: 'error' }
+          : f
+      ));
+  
+      setAlert({
+        show: true,
+        message: 'Error uploading files. Please try again.',
+        type: 'error'
+      });
     }
-  };
+  };  
+
 
   const handleGenerateTranscripts = async () => {
     try {
