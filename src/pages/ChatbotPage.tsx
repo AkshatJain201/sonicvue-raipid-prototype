@@ -55,11 +55,16 @@ const ChatbotPage: React.FC = () => {
   return (
     <Box sx={{ p: 3, height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="h4" gutterBottom sx={{ 
-        bgcolor: 'purple', 
-        color: 'white', 
-        p: 2, 
-        borderRadius: 1, 
-        mb: 4
+        bgcolor: '#6800E0',
+        height: '40px',
+        color: 'white',
+        fontSize: '16px',
+        marginTop:'-15px',
+        p: 2,
+        borderRadius: 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1
       }}>
         AI Support Chatbot
       </Typography>
@@ -101,7 +106,7 @@ const ChatbotPage: React.FC = () => {
           endIcon={isLoading ? <CircularProgress size={24} color="inherit" /> : <SendIcon />}
           onClick={handleSend}
           disabled={isLoading}
-          sx={{ ml: 1 }}
+          sx={{ ml: 1 , bgcolor:'#6800e0'}}
         >
           Send
         </Button>

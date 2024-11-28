@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -29,6 +30,7 @@ import {
 import {
   CloudUpload,
   AudioFile,
+  InsertChartOutlined,
   Check,
   Download,
   FileUpload,
@@ -44,8 +46,8 @@ import DialogContentComponent from '../components/DialogContent';
 interface FileUpload {
   file: File;
   progress: number;
-  status: 'pending' | 'uploading' | 'success' | 'error' | 'processing';
-} 
+  status: 'Ready' | 'uploading' | 'success' | 'error' | 'processing';
+}
 
 interface TranscriptResponse {
   filename: string;
@@ -62,6 +64,7 @@ export default function UploadPage() {
   const [openTranscriptDialog, setOpenTranscriptDialog] = useState(false);
   const [selectedTranscript, setSelectedTranscript] = useState('');
   const [loadingTranscripts, setLoadingTranscripts] = useState(false);
+  const [filesUploaded, setFilesUploaded] = useState(false);
   const [open, setOpen] = useState(false);
   const [alert, setAlert] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
@@ -77,7 +80,7 @@ export default function UploadPage() {
   };
 
   const downloadTranscriptAsPdf = (transcript: string, filename: string) => {
-    const blob = new Blob([transcript], {type: 'text/plain'});
+    const blob = new Blob([transcript], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -118,13 +121,13 @@ export default function UploadPage() {
       });
       return;
     }
-    
+
     const newFiles = acceptedFiles.map(file => ({
       file,
       progress: 0,
-      status: 'pending' as const,
+      status: 'Ready' as const,
     }));
-    
+
     setFiles(prev => [...prev, ...newFiles]);
   }, [files]);
 
@@ -193,7 +196,7 @@ export default function UploadPage() {
   // };
 
   const handleUpload = async () => {
-    const pendingFiles = files.filter(f => f.status === 'pending');
+    const pendingFiles = files.filter(f => f.status === 'Ready');
     console.log(files);
   
     // Create a new FormData object to send all files in one request
@@ -206,7 +209,7 @@ export default function UploadPage() {
   
     // Start updating the status for all files to 'uploading'
     setFiles(prev => prev.map(f =>
-      f.status === 'pending'
+      f.status === 'Ready'
         ? { ...f, status: 'uploading' }
         : f
     ));
@@ -264,7 +267,7 @@ export default function UploadPage() {
           files: uploadedFiles.join(',')
         }
       });
-      
+
       setTranscripts(response.data);
       setShowTranscripts(true);
     } catch (error) {
@@ -286,11 +289,14 @@ export default function UploadPage() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom sx={{ 
-        bgcolor: '#8C51E1', 
-        color: 'white', 
-        p: 2, 
-        borderRadius: 1, 
+      <Typography variant="h4" gutterBottom sx={{
+        bgcolor: '#6800E0',
+        height: '40px',
+        color: 'white',
+        fontSize: '16px',
+        marginTop:'-15px',
+        p: 2,
+        borderRadius: 1,
         display: 'flex',
         alignItems: 'center',
         gap: 1
@@ -342,37 +348,38 @@ export default function UploadPage() {
       )} */}
 
       {files.length > 0 && (
-      <Box sx={{ mb: 4 }}>
-      <Typography variant="h6" gutterBottom sx={{ color: '#333', fontWeight: 'bold' }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" fontSize={'14px'} gutterBottom sx={{ color: '#333', fontWeight: 'bold' }}>
             Files (add up to 5 files)
-      </Typography>
-      <List>
+          </Typography>
+          <List>
             {files.map((fileUpload, index) => (
-      <ListItem
+              <ListItem
                 key={index}
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
+                  height: '60px',
                   padding: '8px 16px',
                   border: '1px solid #E0E0E0',
                   borderRadius: '8px',
                   mb: 2,
-                  boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.05)'
+                  boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.05)',
                 }}
-      >
-      <ListItemIcon sx={{ minWidth: 40 }}>
-      <AudioFile sx={{ color: '#007AFF', fontSize: '24px' }} />
-      </ListItemIcon>
-      <ListItemText
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <AudioFile sx={{ color: '#007AFF', fontSize: '24px' }} />
+                </ListItemIcon>
+                <ListItemText
                   primary={
-      <Typography variant="body1" sx={{ color: '#333', fontWeight: 500 }}>
+                    <Typography variant="body1" sx={{ color: '#333', fontSize: '14px', fontWeight: 500 }}>
                       {fileUpload.file.name}
-      </Typography>
+                    </Typography>
                   }
                   secondary={
                     fileUpload.status === 'uploading' ? (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-      <LinearProgress
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                        <LinearProgress
                           variant="determinate"
                           value={fileUpload.progress}
                           sx={{
@@ -381,214 +388,128 @@ export default function UploadPage() {
                             borderRadius: '4px',
                             backgroundColor: '#F0F0F0',
                             '& .MuiLinearProgress-bar': {
-                              backgroundColor: '#007AFF'
-                            }
+                              backgroundColor: '#007AFF',
+                            },
                           }}
                         />
-      <Typography variant="body2" sx={{ color: '#333', minWidth: '45px' }}>
+                        <Typography variant="body2" sx={{ color: '#333', minWidth: '45px' }}>
                           {`${fileUpload.progress}%`}
-      </Typography>
-      </Box>
+                        </Typography>
+                      </Box>
                     ) : fileUpload.status === 'success' ? (
-      <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, color: '#4CAF50' }}>
-      <Check sx={{ mr: 0.5 }} />
-      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, color: '#4CAF50' }}>
+                        <Check sx={{ mr: 0.5 }} />
+                        <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 500 }}>
                           Uploaded successfully!
-      </Typography>
-      </Box>
-                    ) : fileUpload.status
+                        </Typography>
+                      </Box>
+                    ) : (
+                      fileUpload.status
+                    )
                   }
                 />
-      <IconButton onClick={() => removeFile(fileUpload.file)} sx={{ color: '#888' }}>
-      <Close />
-      </IconButton>
-      </ListItem>
+                <IconButton onClick={() => removeFile(fileUpload.file)} sx={{ color: '#888' }}>
+                  <Close />
+                </IconButton>
+              </ListItem>
             ))}
-      </List>
-      </Box>
+          </List>
+
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Button
+              variant="contained"
+              onClick={() => {
+                handleUpload();
+                setFilesUploaded(true); // Enable other buttons after upload
+              }}
+              disabled={!files.some(f => f.status === 'Ready' || f.status === 'uploading')}
+              sx={{
+                backgroundColor: '#6800E0',
+                height: '35px',
+                fontSize: '12px',
+                ':disabled': { backgroundColor: '#A9A9A9', color: 'white' },
+              }}
+            >
+              Upload Files
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleGenerateTranscripts}
+              disabled={
+                !filesUploaded ||
+                files.some(f => f.status === 'uploading' || f.status === 'processing') ||
+                loadingTranscripts
+              }
+              sx={{
+                backgroundColor: filesUploaded ? '#6800E0' : '#A9A9A9',
+                height: '35px',
+                fontSize: '12px',
+                color: 'white',
+                ':disabled': { backgroundColor: '#A9A9A9' },
+              }}
+            >
+              {loadingTranscripts ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Generate Transcripts'}
+            </Button>
+            <Button
+              component={Link}
+              to="/dashboard"
+              disabled={!filesUploaded}
+              sx={{
+                backgroundColor: filesUploaded ? '#0c0c0c' : '#A9A9A9',
+                height: '35px',
+                fontSize: '12px',
+                color: 'white',
+                ':disabled': { backgroundColor: '#A9A9A9', color: 'white' },
+              }}
+            >
+              <InsertChartOutlined sx={{ height: '16px', mr: 1 }} />
+              Call Analysis
+            </Button>
+          </Box>
+        </Box>
+
+
       )}
-
-      <Paper
-        {...getRootProps()}
-        sx={{
-          p: 6,
-          textAlign: 'center',
-          cursor: 'pointer',
-          border: '2px dashed #ccc',
-          borderRadius: 2,
-          '&:hover': { borderColor: 'purple' }
-        }}
-      >
-        <input {...getInputProps()} />
-        <CloudUpload sx={{ fontSize: 48, color: '#6800E0', mb: 2 }} />
-        <Typography variant="h6" gutterBottom>
-          {isDragActive ? 'Drop the files here' : 'Drag and drop file here'}
-        </Typography>
-        <Typography variant="body1" gutterBottom>
-          or
-        </Typography>
-        <Button
-          variant="contained"
-          onClick={handleBrowseClick}
-          sx={{ mt: 2 , backgroundColor: '#6800E0'}}
-        >
-          Browse Files
-        </Button>
-        <Dialog open={open} onClose={handleClose} >
-          <DialogTitle>Upload Files</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={3} justifyContent="center">
-              <Grid item xs={6}>
-                <IconButton
-                  onClick={handleSingleUpload}
-                  sx={{border: '1px solid #6800E0',
-                  width:'100%',
-                  borderRadius: 2,                   
-                  display: 'flex',                   
-                  flexDirection: 'column',                   
-                  alignItems: 'center',                   
-                  padding:2, 
-                  }} 
-                >
-                  <FileUpload sx={{ fontSize: 40, color: '#6800E0' }} />
-                  <Typography color="#6800E0" noWrap>Single Upload</Typography>
-                </IconButton>
-              </Grid>
-              <Grid item xs={6}>
-                <IconButton
-                  onClick={handleBatchUpload}
-                  sx={{border: '1px solid #6800E0',
-                  borderRadius: 2,                   
-                  display: 'flex',                   
-                  flexDirection: 'column',                   
-                  alignItems: 'center',                   
-                  padding:2, 
-                  }} 
-                >
-                  <FileUpload sx={{ fontSize: 40, color: '#6800E0' }} />
-                  <Typography color="#6800E0">Batch Upload</Typography>
-                </IconButton>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Typography variant="caption" color="textSecondary" sx={{ mx: 'auto' }}>
-              Upload - Max 5 Files
-            </Typography>
-          </DialogActions>
-        </Dialog>
-              
-        <input
-          type="file"
-          ref={fileInputRef}
-          style={{ display: 'none' }}
-          onChange={(e) => e.target.files && onDrop(Array.from(e.target.files))}
-          accept=".mp3,.wav"
-        />
-        <input
-          type="file"
-          ref={batchFileInputRef}
-          style={{ display: 'none' }}
-          multiple
-          onChange={(e) => e.target.files && onDrop(Array.from(e.target.files))}
-          accept=".mp3,.wav"
-        />
-        <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-          Max file size of 25MB - File format .MP3
-        </Typography>
-      </Paper>
-
-      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-        <Button
-          variant="contained"
-          onClick={handleUpload}
-          disabled={!files.some(f => f.status === 'pending' || f.status==='uploading')}
-          sx = {{backgroundColor: '#6800E0'}}
-        >
-          Upload Files
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleGenerateTranscripts}
-          disabled={files.some(f => f.status === 'uploading' || f.status === 'processing') || loadingTranscripts} // Disable while generating
-          sx = {{backgroundColor: '#6800E0'}}
-        >
-          {loadingTranscripts ? <CircularProgress size={24} sx={{ color: '#fff' }} /> : 'Generate Transcripts'}
-        </Button>
-      </Box>
-      
       {transcripts.length > 0 && (
-        <Box sx={{ mt: 4 }}>
+        <Box sx={{ mt: 4, marginBottom: '30px', bgcolor: '#f0f0f0', padding: '30px', borderRadius: '10px' }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="h5" gutterBottom sx={{ color: '#6800E0' , flexGrow : 1}}>
+            <Typography variant="h5" gutterBottom sx={{ color: '#6800E0', flexGrow: 1, fontSize: '16px' }}>
               Generated Transcripts
             </Typography>
-
-            <Box sx={{ display: 'flex', gap: 2, ml : 'auto' }}>
-              <Button
-                variant="contained"
-                startIcon={<GetAppIcon />}
-                onClick={() => {
-                  transcripts.forEach(transcript => {
-                    if (transcript.status === 'completed' && transcript.transcript) {
-                      downloadTranscriptAsPdf(transcript.transcript, transcript.filename);
-                    }
-                  });
-                }}
-                sx={{ backgroundColor: '#6800E0' }}
-              >
-                Download All
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<CloseIcon />}
-                onClick={() => setTranscripts([])}
-                sx={{ 
-                  borderColor: '#6800E0', 
-                  color: '#6800E0',
-                  '&:hover': {
-                    borderColor: '#6800E0',
-                    backgroundColor: 'rgba(104, 0, 224, 0.04)'
-                  }
-                }}
-              >
-                Clear All
-              </Button>
-            </Box>
           </Box>
 
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             {transcripts.map((item) => (
               <Grid item xs={12} sm={6} md={4} key={item.filename}>
-                <Card sx={{ 
-                  height: '100%', 
-                  display: 'flex', 
+                <Card sx={{
+                  height: '100%',
+                  display: 'flex',
                   flexDirection: 'column',
                   '&:hover': { boxShadow: 6 }
                 }}>
                   <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" gutterBottom>
+                    <Typography variant="h6" fontSize={'16px'} gutterBottom>
                       {item.filename}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" noWrap>
+                    <Typography variant="body2" color="text.secondary" fontSize={'12px'} noWrap>
                       {item.transcript?.substring(0, 100)}...
                     </Typography>
                   </CardContent>
                   <CardActions>
                     <Tooltip title="View Transcript">
-                      <IconButton 
-                        color="primary" 
+                      <IconButton
+                        color="primary"
                         onClick={() => item.transcript && showTranscript(item.transcript)}
                       >
-                        <DescriptionIcon sx = {{color: '#8C51E1'}}/>
+                        <DescriptionIcon sx={{ color: '#8C51E1' }} />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Download Transcript">
-                      <IconButton 
+                      <IconButton
                         color="secondary"
                         onClick={() => item.transcript && downloadTranscriptAsPdf(item.transcript, item.filename)}
                       >
-                        <GetAppIcon sx = {{color: '#8C51E1'}}/>
+                        <GetAppIcon sx={{ color: '#8C51E1' }} />
                       </IconButton>
                     </Tooltip>
                   </CardActions>
@@ -597,8 +518,8 @@ export default function UploadPage() {
             ))}
           </Grid>
 
-          <Dialog 
-            open={openTranscriptDialog} 
+          <Dialog
+            open={openTranscriptDialog}
             onClose={() => setOpenTranscriptDialog(false)}
             maxWidth="md"
             fullWidth
@@ -627,16 +548,156 @@ export default function UploadPage() {
                   __html: selectedTranscript.replace(/\n/g, '<br />'),
                 }}
               /> */}
-              <DialogContentComponent selectedTranscript={selectedTranscript}/>
+              <DialogContentComponent selectedTranscript={selectedTranscript} />
             </DialogContent>
             <DialogActions>
+              <Button sx={{ backgroundColor: '#6800E0', color: 'white', height: '35px', fontSize: '12px' }}
+              >
+                <Download sx={{ color: 'white', height: '16px' }} />
+                Download
+              </Button>
               <Button onClick={() => setOpenTranscriptDialog(false)}>
                 Close
               </Button>
             </DialogActions>
           </Dialog>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', marginTop: '30px' }}>
+            <Button
+              variant="contained"
+              startIcon={<GetAppIcon />}
+              onClick={() => {
+                transcripts.forEach(transcript => {
+                  if (transcript.status === 'completed' && transcript.transcript) {
+                    downloadTranscriptAsPdf(transcript.transcript, transcript.filename);
+                  }
+                });
+              }}
+              sx={{ backgroundColor: '#6800E0' }}
+            >
+              Download All
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<CloseIcon />}
+              onClick={() => setTranscripts([])}
+              sx={{
+                borderColor: '#6800E0',
+                color: '#6800E0',
+                '&:hover': {
+                  borderColor: '#6800E0',
+                  backgroundColor: 'rgba(104, 0, 224, 0.04)'
+                }
+              }}
+            >
+              Clear All
+            </Button>
+          </Box>
         </Box>
       )}
+
+      <Paper
+        {...getRootProps()}
+        sx={{
+          p: 6,
+          textAlign: 'center',
+          cursor: 'pointer',
+          border: '2px dashed #ccc',
+          borderRadius: 2,
+          '&:hover': { borderColor: 'purple' }
+        }}
+      >
+        <input {...getInputProps()} />
+        <CloudUpload sx={{ fontSize: 48, color: '#6800E0', mb: 2 }} />
+        <Typography variant="h6" gutterBottom>
+          {isDragActive ? 'Drop the files here' : 'Drag and drop file here'}
+        </Typography>
+        <Typography variant="body1" gutterBottom>
+          or
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={handleBrowseClick}
+          sx={{ mt: 2, backgroundColor: '#6800E0' }}
+        >
+          Browse Files
+        </Button>
+        <Dialog open={open} onClose={handleClose} sx={{
+          '& .MuiDialog-paper': {
+            width: '500px',
+            height: '250px',
+          },
+        }}>
+          <DialogTitle>Upload Files</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={3} justifyContent="center">
+              <Grid item xs={6}>
+                <IconButton
+                  onClick={handleSingleUpload}
+                  sx={{
+                    border: '1px solid #6800E0',
+                    width: '100%',
+                    height: '100px',
+                    borderRadius: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: 2,
+                  }}
+                >
+                  <FileUpload sx={{ fontSize: 40, color: '#6800E0' }} />
+                  <Typography color="#6800E0" noWrap>Single Upload</Typography>
+                </IconButton>
+              </Grid>
+              <Grid item xs={6}>
+                <IconButton
+                  onClick={handleBatchUpload}
+                  sx={{
+                    border: '1px solid #6800E0',
+                    width: '100%',
+                    height: '100px',
+                    borderRadius: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: 2,
+                  }}
+                >
+                  <FileUpload sx={{ fontSize: 40, color: '#6800E0' }} />
+                  <Typography color="#6800E0">Batch Upload</Typography>
+                  <Typography variant="caption" color="textSecondary" sx={{ mx: 'auto' }}>
+                    Upload - Max 5 Files
+                  </Typography>
+                </IconButton>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Typography variant="caption" color="textSecondary" sx={{ mx: 'auto' }}>
+              File format .MP3, WAV.
+            </Typography>
+          </DialogActions>
+        </Dialog>
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          onChange={(e) => e.target.files && onDrop(Array.from(e.target.files))}
+          accept=".mp3,.wav"
+        />
+        <input
+          type="file"
+          ref={batchFileInputRef}
+          style={{ display: 'none' }}
+          multiple
+          onChange={(e) => e.target.files && onDrop(Array.from(e.target.files))}
+          accept=".mp3,.wav"
+        />
+        <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
+          Max file size of 25MB - File format .MP3, WAV.
+        </Typography>
+      </Paper>
+
 
       <Snackbar
         open={alert.show}

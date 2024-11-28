@@ -13,7 +13,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <Header />
       <Box sx={{ display: 'flex', flex: 1 }}>
-        <Box sx={{ width: 200 }}> 
+        <Box> 
           <Sidebar />
         </Box>
         <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
