@@ -38,9 +38,9 @@ interface DashboardData {
     resolution_confirmation: number;
     cs_portal_recommended: number;
   };
-  calls_complexity: {
+  complexity: {
     easy: number;
-    medium: number;
+    intermediate: number;
     difficult: number;
   };
   call_hygiene: {
@@ -56,16 +56,15 @@ interface DashboardData {
   event_type: {
     [key: string]: number;
   };
-  customer_service: {
-    parts_request: number;
-    digital_service: number;
-    field_visits: number;
-  };
-
   root_cause_analysis: {
     hold_time: number;
     resolution_time: number;
     route_time: number;
+  };
+  customer_service: {
+    parts_request: number;
+    digital_service: number;
+    field_visits: number;
   };
 }
 
@@ -78,28 +77,43 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [modality, clinicalTechnical, complexity, eventType]); // Added all filters to dependency array
 
   const fetchDashboardData = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/dashboard-data');
+      const response = await axios.get('http://localhost:8000/dashboard-data', {
+        params: {
+          modality: modality === 'All' ? undefined : modality,
+          clinicalTechnical: clinicalTechnical === 'All' ? undefined : clinicalTechnical,
+          complexity: complexity === 'All' ? undefined : complexity,
+          eventType: eventType === 'All' ? undefined : eventType
+        }
+      });
+      
+      // Validate response data
+      if (!response.data) {
+        console.error('Invalid dashboard data received:', response.data);
+        setDashboardData(null);
+        return;
+      }
+      
       setDashboardData(response.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setDashboardData(null);
     }
   };
 
   if (!dashboardData) {
-    return <Typography>Loading...</Typography>;
+    return <Typography>No data available for the selected filters</Typography>;
   }
-
 
   const renderKPI = (title: string, value: number, unit: string = '', icon: React.ReactNode) => (
     <Paper elevation={3} sx={{ p: 2, textAlign: 'center', height: '100%' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'start', gap: '28px' }}>
         {icon}
         <Typography sx={{ fontSize: '20px' }} variant="h6">
-          {value.toFixed(0)}{unit}
+          {value?.toFixed(0) || 0}{unit}
         </Typography>
       </Box>
       <Typography sx={{ fontSize: '10px' }} variant="body2">
@@ -108,43 +122,42 @@ const Dashboard: React.FC = () => {
     </Paper>
   );
 
+  const callComplexityData = dashboardData?.complexity ? [
+    { name: 'Easy', value: dashboardData.complexity.easy || 0 },
+    { name: 'Intermediate', value: dashboardData.complexity.intermediate || 0 },
+    { name: 'Difficult', value: dashboardData.complexity.difficult || 0 },
+  ].filter(item => item.value > 0) : [];
 
-  const callComplexityData = [
-    { name: 'Easy', value: dashboardData.calls_complexity.easy },
-    { name: 'Medium', value: dashboardData.calls_complexity.medium },
-    { name: 'Difficult', value: dashboardData.calls_complexity.difficult },
-  ];
+  const callHygieneData = dashboardData?.call_hygiene ? [
+    { name: 'Greeting', value: dashboardData.call_hygiene.greeting || 0 },
+    { name: 'Phone Number', value: dashboardData.call_hygiene.phone_number || 0 },
+    { name: 'Email', value: dashboardData.call_hygiene.email || 0 },
+  ].filter(item => item.value > 0) : [];
 
-  const callHygieneData = [
-    { name: 'Greeting', value: dashboardData.call_hygiene.greeting },
-    { name: 'Phone Number', value: dashboardData.call_hygiene.phone_number },
-    { name: 'Email', value: dashboardData.call_hygiene.email },
-  ];
+  const toneConversationData = dashboardData?.tone_conversation ? [
+    { name: 'Positive', value: dashboardData.tone_conversation.positive || 0 },
+    { name: 'Negative', value: dashboardData.tone_conversation.negative || 0 },
+  ].filter(item => item.value > 0) : [];
 
-  const toneConversationData = [
-    { name: 'Positive', value: dashboardData.tone_conversation.positive },
-    // { name: 'Neutral', value: dashboardData.tone_conversation.neutral },
-    { name: 'Negative', value: dashboardData.tone_conversation.negative },
-  ];
+  const eventTypeData = dashboardData?.event_type ? 
+    Object.entries(dashboardData.event_type)
+      .map(([name, value]) => ({ name, value: value || 0 }))
+      .filter(item => item.value > 0) : [];
 
-  const eventTypeData = Object.entries(dashboardData.event_type).map(([name, value]) => ({ name, value }));
+  const customerServiceData = dashboardData?.customer_service ? [
+    { name: 'Parts Request', value: dashboardData.customer_service.parts_request || 0 },
+    { name: 'Digital Service', value: dashboardData.customer_service.digital_service || 0 },
+    { name: 'Field Visits', value: dashboardData.customer_service.field_visits || 0 },
+  ].filter(item => item.value > 0) : [];
 
-  const customerServiceData = [
-    { name: 'Parts Request', value: dashboardData.customer_service.parts_request },
-    { name: 'Digital Service', value: dashboardData.customer_service.digital_service },
-    { name: 'Field Visits', value: dashboardData.customer_service.field_visits },
-  ];
-
-  const rootCauseAnalysis = [
+  const rootCauseAnalysis = dashboardData?.root_cause_analysis ? [
     {
       category: 'Root Cause Analysis',
-      holdTime: dashboardData.root_cause_analysis.hold_time,
-      resolutionTime: dashboardData.root_cause_analysis.resolution_time,
-      routeTime: dashboardData.root_cause_analysis.route_time,
+      holdTime: dashboardData.root_cause_analysis.hold_time || 0,
+      resolutionTime: dashboardData.root_cause_analysis.resolution_time || 0,
+      routeTime: dashboardData.root_cause_analysis.route_time || 0,
     },
-  ];
-
-
+  ].filter(item => item.holdTime > 0 || item.resolutionTime > 0 || item.routeTime > 0) : [];
 
   return (
     <Box sx={{ p: 3 }}>
@@ -179,13 +192,13 @@ const Dashboard: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
             <FormControl sx={{ minWidth: 120 }}>
               <Select
-                sx={{ height: '30px', fontSize: '12px' }} // Reduced font size for Select component
+                sx={{ height: '30px', fontSize: '12px' }}
                 value={modality}
                 onChange={(e) => setModality(e.target.value as string)}
                 displayEmpty
               >
                 <MenuItem value="">
-                  <em style={{ fontSize: '12px' }}>Select</em> {/* Reduced font size for placeholder */}
+                  <em style={{ fontSize: '12px' }}>Select</em>
                 </MenuItem>
                 <MenuItem sx={{ fontSize: '12px' }} value="All">All</MenuItem>
                 <MenuItem sx={{ fontSize: '12px' }} value="CT">CT</MenuItem>
@@ -220,7 +233,7 @@ const Dashboard: React.FC = () => {
                 </MenuItem>
                 <MenuItem sx={{ fontSize: '12px' }} value="All">All</MenuItem>
                 <MenuItem sx={{ fontSize: '12px' }} value="Easy">Easy</MenuItem>
-                <MenuItem sx={{ fontSize: '12px' }} value="Medium">Medium</MenuItem>
+                <MenuItem sx={{ fontSize: '12px' }} value="Intermediate">Intermediate</MenuItem>
                 <MenuItem sx={{ fontSize: '12px' }} value="Difficult">Difficult</MenuItem>
               </Select>
             </FormControl>
@@ -235,7 +248,7 @@ const Dashboard: React.FC = () => {
                   <em style={{ fontSize: '12px' }}>Select</em>
                 </MenuItem>
                 <MenuItem sx={{ fontSize: '12px' }} value="All">All</MenuItem>
-                {Object.keys(dashboardData.event_type).map((type) => (
+                {Object.keys(dashboardData?.event_type || {}).map((type) => (
                   <MenuItem key={type} sx={{ fontSize: '12px' }} value={type}>
                     {type}
                   </MenuItem>
@@ -251,26 +264,26 @@ const Dashboard: React.FC = () => {
 
       <Grid container spacing={2} sx={{ justifyContent: 'space-between', flexWrap: 'nowrap', overflow: 'hidden', padding: '5px' }}>
         <Grid item sx={{ flex: '1 1 auto', textAlign: 'center', minWidth: '170px' }}>
-          {renderKPI('Total Calls', dashboardData.summary.total_calls, '', <CloudUploadOutlined sx={{ fontSize: 20, color: '#6800e0' }} />)}
+          {renderKPI('Total Calls', dashboardData?.summary?.total_calls || 0, '', <CloudUploadOutlined sx={{ fontSize: 20, color: '#6800e0' }} />)}
         </Grid>
 
         <Grid item sx={{ flex: '1 1 auto', textAlign: 'center', minWidth: '170px' }}>
-          {renderKPI('Call Routing Accuracy', dashboardData.summary.call_routing_accuracy, '%', <InsertChartOutlined sx={{ fontSize: 20, color: '#6800e0' }} />)}
+          {renderKPI('Call Routing Accuracy', dashboardData?.summary?.call_routing_accuracy || 0, '%', <InsertChartOutlined sx={{ fontSize: 20, color: '#6800e0' }} />)}
         </Grid>
         <Grid item sx={{ flex: '1 1 auto', textAlign: 'center', minWidth: '170px' }}>
-          {renderKPI('Multiple Agents Invited', dashboardData.summary.multiple_agents, '%', <PhoneInTalkOutlined sx={{ fontSize: 20, color: '#6800e0' }} />)}
+          {renderKPI('Multiple Agents Invited', dashboardData?.summary?.multiple_agents || 0, '%', <PhoneInTalkOutlined sx={{ fontSize: 20, color: '#6800e0' }} />)}
         </Grid>
 
         <Grid item sx={{ flex: '1 1 auto', textAlign: 'center', minWidth: '170px' }} >
-          {renderKPI('Call Hold', dashboardData.summary.call_hold_percentage, '%', <VerifiedUserOutlined sx={{ fontSize: 20, color: '#6800e0' }} />)}
+          {renderKPI('Call Hold', dashboardData?.summary?.call_hold_percentage || 0, '%', <VerifiedUserOutlined sx={{ fontSize: 20, color: '#6800e0' }} />)}
         </Grid>
 
         <Grid item sx={{ flex: '1 1 auto', textAlign: 'center', minWidth: '170px' }}>
-          {renderKPI('Escalated Calls', dashboardData.summary.escalated_calls, '%', <CheckCircleOutlined sx={{ fontSize: 20, color: '#6800e0' }} />)}
+          {renderKPI('Escalated Calls', dashboardData?.summary?.escalated_calls || 0, '%', <CheckCircleOutlined sx={{ fontSize: 20, color: '#6800e0' }} />)}
         </Grid>
 
         <Grid item sx={{ flex: '1 1 auto', textAlign: 'center', minWidth: '170px' }}>
-          {renderKPI('Resolution Confirmation', dashboardData.summary.resolution_confirmation, '%', <ContactSupportOutlined sx={{ fontSize: 20, color: '#6800e0' }} />)}
+          {renderKPI('Resolution Confirmation', dashboardData?.summary?.resolution_confirmation || 0, '%', <ContactSupportOutlined sx={{ fontSize: 20, color: '#6800e0' }} />)}
         </Grid>
       </Grid>
 
@@ -292,69 +305,72 @@ const Dashboard: React.FC = () => {
               <Typography variant="subtitle1" sx={{ fontSize: "14px", textAlign: "center", mb: 1 }}>
                 {chart.title}
               </Typography>
-              <ResponsiveContainer width="100%" height={200}>
-                {chart.chartType === "Pie" ? (
-                  <PieChart>
-                    <Pie
-                      data={chart.data}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={70}
-                      fill={chart.color}
-                      dataKey="value"
-                      label={({ name, percent, x, y, index }) => (
-                        <text
-                          x={x}
-                          y={y}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          style={{
-                            fontSize: '12px',
-                            fill: chart.colors[index % chart.colors.length],
-                            pointerEvents: 'none',
-                            transform: `translateX(${x < 80 ? -20 : 20}px)`,
-                          }}
-                        >
-                          {`${name} ${(percent * 100).toFixed(0)}%`}
-                        </text>
-                      )}
-                    >
-                      {chart.data.map((entry, idx) => (
-                        <Cell key={`cell-${idx}`} fill={chart.colors[idx % chart.colors.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                ) : chart.chartType === "StackedBar" ? (
-                  <BarChart width={500} height={300} data={rootCauseAnalysis}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="category" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                    <Bar dataKey="holdTime" stackId="a" fill={'#ffc658'} />
-                    <Bar dataKey="resolutionTime" stackId="a" fill={'#82ca9d'} />
-                    <Bar dataKey="routeTime" stackId="a" fill={'#8884d8'} />
-                  </BarChart>
-                ) : (
-                  <BarChart data={chart.data}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: "10px" }} />
-                    <Bar dataKey="value" fill={chart.color} />
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
+              {chart.data.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  {chart.chartType === "Pie" ? (
+                    <PieChart>
+                      <Pie
+                        data={chart.data}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={70}
+                        fill={chart.color}
+                        dataKey="value"
+                        label={({ name, percent, x, y, index }) => (
+                          <text
+                            x={x}
+                            y={y}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            style={{
+                              fontSize: '12px',
+                              fill: chart.colors[index % chart.colors.length],
+                              pointerEvents: 'none',
+                              transform: `translateX(${x < 80 ? -20 : 20}px)`,
+                            }}
+                          >
+                            {`${name} ${(percent * 100).toFixed(0)}%`}
+                          </text>
+                        )}
+                      >
+                        {chart.data.map((entry, idx) => (
+                          <Cell key={`cell-${idx}`} fill={chart.colors[idx % chart.colors.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  ) : chart.chartType === "StackedBar" ? (
+                    <BarChart width={500} height={300} data={rootCauseAnalysis}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="category" tick={{ fontSize: 10 }} />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                      <Bar dataKey="holdTime" stackId="a" fill={'#ffc658'} />
+                      <Bar dataKey="resolutionTime" stackId="a" fill={'#82ca9d'} />
+                      <Bar dataKey="routeTime" stackId="a" fill={'#8884d8'} />
+                    </BarChart>
+                  ) : (
+                    <BarChart data={chart.data}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                      <Bar dataKey="value" fill={chart.color} />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              ) : (
+                <Typography sx={{ textAlign: 'center', py: 5, color: '#666' }}>
+                  No data available for selected filters
+                </Typography>
+              )}
             </Paper>
           </Grid>
         ))}
       </Grid>
-
-
-
 
     </Box>
   );
