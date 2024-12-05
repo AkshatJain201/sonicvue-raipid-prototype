@@ -44,7 +44,7 @@ interface DashboardData {
   };
   complexity: {
     easy: number;
-    medium: number;
+    intermediate: number;
     difficult: number;
   };
   call_hygiene: {
@@ -115,7 +115,7 @@ const Dashboard: React.FC = () => {
 
   const callComplexityData = [
     { name: 'Easy', value: dashboardData.complexity.easy },
-    { name: 'Medium', value: dashboardData.complexity.medium },
+    { name: 'Intermediate', value: dashboardData.complexity.intermediate },
     { name: 'Difficult', value: dashboardData.complexity.difficult },
   ];
 
