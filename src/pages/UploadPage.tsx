@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import { Link } from 'react-router-dom';
 import {
   Box,
@@ -79,14 +81,62 @@ export default function UploadPage() {
     setOpenTranscriptDialog(true);
   };
 
-  const downloadTranscriptAsPdf = (transcript: string, filename: string) => {
-    const blob = new Blob([transcript], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}.txt`;
-    a.click();
+  const downloadAllTranscriptsAsZip = async (transcripts: any[]) => {
+    const zip = new JSZip();
+
+    // Add each transcript to the ZIP
+    transcripts.forEach(transcript => {
+      if (transcript.status === 'completed' && transcript.transcript) {
+        zip.file(`${transcript.filename}.txt`, transcript.transcript);
+      }
+    });
+
+    try {
+      // Generate the ZIP file as a Blob
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+      // Prompt the user to choose a save location
+      if ('showSaveFilePicker' in window) {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: 'transcripts.zip',
+          types: [
+            {
+              description: 'ZIP Files',
+              accept: { 'application/zip': ['.zip'] },
+            },
+          ],
+        });
+
+        const writable = await handle.createWritable();
+        await writable.write(zipBlob);
+        await writable.close();
+      }
+    } catch (error) {
+      console.error('Failed to generate or download ZIP file:', error);
+    }
   };
+
+  const downloadTranscriptAsPdf2 = async (transcript: string, filename: string) => {
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: `${filename}.txt`,
+          types: [
+            {
+              description: 'Text File',
+              accept: { 'text/plain': ['.txt'] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(transcript);
+        await writable.close();
+      } catch (err) {
+        console.error('Save operation was canceled or failed', err);
+      }
+    }
+  };
+
 
   const handleBrowseClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     // setAnchorEl(event.currentTarget);
@@ -198,22 +248,22 @@ export default function UploadPage() {
   const handleUpload = async () => {
     const pendingFiles = files.filter(f => f.status === 'Ready');
     console.log(files);
-  
+
     // Create a new FormData object to send all files in one request
     const formData = new FormData();
-  
+
     // Append all pending files to the form data
     pendingFiles.forEach(fileUpload => {
       formData.append('files', fileUpload.file);
     });
-  
+
     // Start updating the status for all files to 'uploading'
     setFiles(prev => prev.map(f =>
       f.status === 'Ready'
         ? { ...f, status: 'uploading' }
         : f
     ));
-  
+
     try {
       // Send the FormData to the backend as a single request
       const response = await axios.post('http://localhost:8000/upload', formData, {
@@ -228,14 +278,14 @@ export default function UploadPage() {
           }
         },
       });
-  
+
       // Update the status of all files to 'success' after upload
       setFiles(prev => prev.map(f =>
         f.status === 'uploading'
           ? { ...f, status: 'success' }
           : f
       ));
-  
+
       setAlert({
         show: true,
         message: 'Files uploaded successfully!',
@@ -248,14 +298,14 @@ export default function UploadPage() {
           ? { ...f, status: 'error' }
           : f
       ));
-  
+
       setAlert({
         show: true,
         message: 'Error uploading files. Please try again.',
         type: 'error'
       });
     }
-  };  
+  };
 
 
   const handleGenerateTranscripts = async () => {
@@ -294,7 +344,7 @@ export default function UploadPage() {
         height: '40px',
         color: 'white',
         fontSize: '16px',
-        marginTop:'-15px',
+        marginTop: '-15px',
         p: 2,
         borderRadius: 1,
         display: 'flex',
@@ -388,7 +438,7 @@ export default function UploadPage() {
                             borderRadius: '4px',
                             backgroundColor: '#F0F0F0',
                             '& .MuiLinearProgress-bar': {
-                              backgroundColor: '#007AFF',
+                              backgroundColor: '#0EAB03',
                             },
                           }}
                         />
@@ -507,7 +557,7 @@ export default function UploadPage() {
                     <Tooltip title="Download Transcript">
                       <IconButton
                         color="secondary"
-                        onClick={() => item.transcript && downloadTranscriptAsPdf(item.transcript, item.filename)}
+                        onClick={() => item.transcript && downloadTranscriptAsPdf2(item.transcript, item.filename)}
                       >
                         <GetAppIcon sx={{ color: '#8C51E1' }} />
                       </IconButton>
@@ -539,19 +589,17 @@ export default function UploadPage() {
               </IconButton>
             </DialogTitle>
             <DialogContent dividers>
-              {/* <Typography>
-                {selectedTranscript}
-              </Typography> */}
-              {/* <Typography
-                component="div"
-                dangerouslySetInnerHTML={{
-                  __html: selectedTranscript.replace(/\n/g, '<br />'),
-                }}
-              /> */}
               <DialogContentComponent selectedTranscript={selectedTranscript} />
             </DialogContent>
             <DialogActions>
-              <Button sx={{ backgroundColor: '#6800E0', color: 'white', height: '35px', fontSize: '12px' }}
+              <Button
+                sx={{ backgroundColor: '#6800E0', color: 'white', height: '35px', fontSize: '12px' }}
+                onClick={() => {
+                  const transcript = transcripts.find(t => t.transcript === selectedTranscript);
+                  if (transcript) {
+                    downloadTranscriptAsPdf2(transcript.transcript || "", transcript.filename);
+                  }
+                }}
               >
                 <Download sx={{ color: 'white', height: '16px' }} />
                 Download
@@ -561,17 +609,13 @@ export default function UploadPage() {
               </Button>
             </DialogActions>
           </Dialog>
+
+
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', marginTop: '30px' }}>
             <Button
               variant="contained"
               startIcon={<GetAppIcon />}
-              onClick={() => {
-                transcripts.forEach(transcript => {
-                  if (transcript.status === 'completed' && transcript.transcript) {
-                    downloadTranscriptAsPdf(transcript.transcript, transcript.filename);
-                  }
-                });
-              }}
+              onClick={() => downloadAllTranscriptsAsZip(transcripts)}
               sx={{ backgroundColor: '#6800E0' }}
             >
               Download All

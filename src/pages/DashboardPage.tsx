@@ -268,11 +268,12 @@ const DashboardPage: React.FC = () => {
           </Button>
           <Button
             variant="contained"
-            startIcon={view === 'dashboard' ? <TableChartIcon /> : <DashboardIcon />}
-            onClick={() => handleViewChange(view === 'dashboard' ? 'table' : 'dashboard')}
+            startIcon={<DownloadIcon />}
+            sx={{ mr: 1 }}
           >
-            {view === 'dashboard' ? 'Table View' : 'Dashboard View'}
+            Download PDF
           </Button>
+          
         </Box>
       </Box>
 

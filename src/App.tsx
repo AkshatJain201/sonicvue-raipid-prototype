@@ -1,35 +1,69 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import React, { useContext } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Layout from './components/Layout';
 import UploadPage from './pages/UploadPage';
-// import DashboardPage from './pages/DashboardPage';
 import Dashboard from './pages/TryDashboard';
 import ChatbotPage from './pages/ChatbotPage';
+import LoginPage from './pages/LoginPage';
+import { AuthProvider, AuthContext } from './context/AuthContext';
+import { Outlet } from 'react-router-dom';
+import DataTable from './pages/TableView';
 
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#8e24aa', // Purple color
+      main: '#8e24aa',
     },
   },
 });
+
+const ProtectedRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => {
+  const { isAuthenticated } = useContext(AuthContext);
+  return isAuthenticated ? element : <Navigate to="/login" replace />;
+};
+
+function AppContent() {
+  const { isAuthenticated, logout } = useContext(AuthContext);
+
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={!isAuthenticated ? <LoginPage /> : <Navigate to="/upload" replace />}
+      />
+      <Route
+        element={
+          isAuthenticated ? (
+            <Layout onLogout={logout}> {/* Pass the onLogout to Layout */}
+              <Outlet />
+            </Layout>
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      >
+        <Route path="/upload" element={<ProtectedRoute element={<UploadPage />} />} />
+        <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
+        <Route path="/chatbot" element={<ProtectedRoute element={<ChatbotPage />} />} />
+        <Route path="/login" element={<ProtectedRoute element={<LoginPage />} />} />
+        <Route path="/tableview" element={<ProtectedRoute element={<DataTable />} /> } />
+      </Route>
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
+}
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <Layout>
-          <Routes>
-            <Route path="/" Component={UploadPage} />
-            {/* <Route path="/dashboard" Component={DashboardPage} /> */}
-            <Route path="/dashboard" Component={Dashboard} />
-            <Route path="/chatbot" Component={ChatbotPage} />
-          </Routes>
-        </Layout>
-      </Router>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

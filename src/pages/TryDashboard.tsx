@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -26,7 +27,10 @@ import {
 import { Download, CloudUploadOutlined, InsertChartOutlined, PhoneInTalkOutlined, VerifiedUserOutlined, CheckCircleOutlined, ContactSupportOutlined } from '@mui/icons-material';
 import axios from 'axios';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+const COLORS = ['#3457D5', '#1877F2', '#00308F', '#FF8042'];
+const colors = ["#1877F2", "#3457D5", "#00308F"];
+
+
 
 interface DashboardData {
   summary: {
@@ -38,7 +42,7 @@ interface DashboardData {
     resolution_confirmation: number;
     cs_portal_recommended: number;
   };
-  calls_complexity: {
+  complexity: {
     easy: number;
     medium: number;
     difficult: number;
@@ -110,9 +114,9 @@ const Dashboard: React.FC = () => {
 
 
   const callComplexityData = [
-    { name: 'Easy', value: dashboardData.calls_complexity.easy },
-    { name: 'Medium', value: dashboardData.calls_complexity.medium },
-    { name: 'Difficult', value: dashboardData.calls_complexity.difficult },
+    { name: 'Easy', value: dashboardData.complexity.easy },
+    { name: 'Medium', value: dashboardData.complexity.medium },
+    { name: 'Difficult', value: dashboardData.complexity.difficult },
   ];
 
   const callHygieneData = [
@@ -138,12 +142,11 @@ const Dashboard: React.FC = () => {
   const rootCauseAnalysis = [
     {
       category: 'Root Cause Analysis',
-      holdTime: dashboardData.root_cause_analysis.hold_time,
-      resolutionTime: dashboardData.root_cause_analysis.resolution_time,
-      routeTime: dashboardData.root_cause_analysis.route_time,
+      HoldTime: dashboardData.root_cause_analysis.hold_time,
+      ResolutionTime: dashboardData.root_cause_analysis.resolution_time,
+      RouteTime: dashboardData.root_cause_analysis.route_time,
     },
   ];
-
 
 
   return (
@@ -169,8 +172,8 @@ const Dashboard: React.FC = () => {
         <Box>
           {/* Labels Section */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, }}>
-            <Typography sx={{ minWidth: 120, textAlign: 'start', fontSize: '12px', color: '#b0b0b0' }}>Modality</Typography>
-            <Typography sx={{ minWidth: 120, textAlign: 'start', fontSize: '12px', color: '#b0b0b0' }}>Clinical/Technical</Typography>
+            <Typography sx={{ minWidth: 120, textAlign: 'start', fontSize: '12px', color: '#b0b0b0' }}>Category</Typography>
+            {/* <Typography sx={{ minWidth: 120, textAlign: 'start', fontSize: '12px', color: '#b0b0b0' }}>Clinical/Technical</Typography> */}
             <Typography sx={{ minWidth: 120, textAlign: 'start', fontSize: '12px', color: '#b0b0b0' }}>Complexity</Typography>
             <Typography sx={{ minWidth: 120, textAlign: 'start', fontSize: '12px', color: '#b0b0b0' }}>Event Type</Typography>
           </Box>
@@ -184,30 +187,30 @@ const Dashboard: React.FC = () => {
                 onChange={(e) => setModality(e.target.value as string)}
                 displayEmpty
               >
-                <MenuItem value="">
+                <MenuItem value="" disabled>
                   <em style={{ fontSize: '12px' }}>Select</em> {/* Reduced font size for placeholder */}
                 </MenuItem>
                 <MenuItem sx={{ fontSize: '12px' }} value="All">All</MenuItem>
-                <MenuItem sx={{ fontSize: '12px' }} value="CT">CT</MenuItem>
-                <MenuItem sx={{ fontSize: '12px' }} value="MR">MR</MenuItem>
-                <MenuItem sx={{ fontSize: '12px' }} value="IGT">IGT</MenuItem>
+                <MenuItem sx={{ fontSize: '12px' }} value="CT">Ultrasound</MenuItem>
+                {/* <MenuItem sx={{ fontSize: '12px' }} value="MR">MR</MenuItem>
+                <MenuItem sx={{ fontSize: '12px' }} value="IGT">IGT</MenuItem> */}
               </Select>
             </FormControl>
-            <FormControl sx={{ minWidth: 120 }}>
+            {/* <FormControl sx={{ minWidth: 120 }}>
               <Select
                 sx={{ height: '30px', fontSize: '12px' }}
                 value={clinicalTechnical}
                 onChange={(e) => setClinicalTechnical(e.target.value as string)}
                 displayEmpty
               >
-                <MenuItem value="">
+                <MenuItem value="" disabled>
                   <em style={{ fontSize: '12px' }}>Select</em>
                 </MenuItem>
                 <MenuItem sx={{ fontSize: '12px' }} value="All">All</MenuItem>
                 <MenuItem sx={{ fontSize: '12px' }} value="Clinical">Clinical</MenuItem>
                 <MenuItem sx={{ fontSize: '12px' }} value="Technical">Technical</MenuItem>
               </Select>
-            </FormControl>
+            </FormControl> */}
             <FormControl sx={{ minWidth: 120 }}>
               <Select
                 sx={{ height: '30px', fontSize: '12px' }}
@@ -215,7 +218,7 @@ const Dashboard: React.FC = () => {
                 onChange={(e) => setComplexity(e.target.value as string)}
                 displayEmpty
               >
-                <MenuItem value="">
+                <MenuItem value="" disabled>
                   <em style={{ fontSize: '12px' }}>Select</em>
                 </MenuItem>
                 <MenuItem sx={{ fontSize: '12px' }} value="All">All</MenuItem>
@@ -231,7 +234,7 @@ const Dashboard: React.FC = () => {
                 onChange={(e) => setEventType(e.target.value as string)}
                 displayEmpty
               >
-                <MenuItem value="">
+                <MenuItem value="" disabled>
                   <em style={{ fontSize: '12px' }}>Select</em>
                 </MenuItem>
                 <MenuItem sx={{ fontSize: '12px' }} value="All">All</MenuItem>
@@ -245,7 +248,7 @@ const Dashboard: React.FC = () => {
           </Box>
         </Box>
         <Button sx={{ height: '30px', bgcolor: '#0c0c0c', fontSize: '10px' }} variant="contained" ><Download sx={{ height: '15px' }} />
-          Download PDF
+          Table View
         </Button>
       </Box>
 
@@ -276,15 +279,15 @@ const Dashboard: React.FC = () => {
 
       <Grid container spacing={2} sx={{ mt: 2 }}>
         {[
-          { title: "Calls Complexity", data: callComplexityData, color: "#8884d8" },
-          { title: "Call Hygiene", data: callHygieneData, color: "#82ca9d" },
+          { title: "Calls Complexity", data: callComplexityData, color: "#1877F2" },
+          { title: "Call Hygiene", data: callHygieneData, color: "#979FDE" },
           { title: "Tone of Conversation", data: toneConversationData, chartType: "Pie", colors: COLORS },
-          { title: "Event Type", data: eventTypeData, color: "#ffc658" },
+          { title: "Event Type", data: eventTypeData, color: "#5F81CE" },
           { title: "Customer Service", data: customerServiceData, color: "#8884d8" },
           {
             title: "Root Cause Analysis", data: rootCauseAnalysis,
             chartType: "StackedBar",
-            colors: ["#8884d8", "#82ca9d", "#ffc658"]
+            colors: ["#00308F", "#5F81CE", "#95D7FF"]
           },
         ].map((chart, index) => (
           <Grid item xs={12} sm={6} md={4} key={index}>
@@ -327,24 +330,36 @@ const Dashboard: React.FC = () => {
                     <Tooltip />
                   </PieChart>
                 ) : chart.chartType === "StackedBar" ? (
-                  <BarChart width={500} height={300} data={rootCauseAnalysis}>
+                  <BarChart
+                    width={500}
+                    height={300}
+                    data={rootCauseAnalysis}
+                    layout="vertical"
+                    barSize={40}
+                    barCategoryGap="15%"
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="category" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
+                    <XAxis type="number" tick={{ fontSize: 10 }} />
+                    <YAxis type="category" dataKey="category" tick={{ fontSize: 10 }} />
                     <Tooltip />
                     <Legend wrapperStyle={{ fontSize: "10px" }} />
-                    <Bar dataKey="holdTime" stackId="a" fill={'#ffc658'} />
-                    <Bar dataKey="resolutionTime" stackId="a" fill={'#82ca9d'} />
-                    <Bar dataKey="routeTime" stackId="a" fill={'#8884d8'} />
+                    <Bar dataKey="HoldTime" stackId="a" fill={'#1877F2'} />
+                    <Bar dataKey="ResolutionTime" stackId="a" fill={'#3457D5'} />
+                    <Bar dataKey="RouteTime" stackId="a" fill={'#00308F'} />
                   </BarChart>
                 ) : (
                   <BarChart data={chart.data}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid strokeDasharray="3 0" />
                     <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} />
                     <Tooltip />
                     <Legend wrapperStyle={{ fontSize: "10px" }} />
-                    <Bar dataKey="value" fill={chart.color} />
+                    <Bar dataKey="value" barSize={40}>
+                      {chart.data.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                      ))}
+                    </Bar>
+
                   </BarChart>
                 )}
               </ResponsiveContainer>
