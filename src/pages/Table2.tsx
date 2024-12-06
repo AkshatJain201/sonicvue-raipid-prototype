@@ -25,10 +25,9 @@ import {
   Cell,
 } from 'recharts';
 import { Download, CloudUploadOutlined, InsertChartOutlined, PhoneInTalkOutlined, VerifiedUserOutlined, CheckCircleOutlined, ContactSupportOutlined } from '@mui/icons-material';
-import TableChartIcon from '@mui/icons-material/TableChart';
 import axios from 'axios';
 
-const COLORS = ['#399918', '#FF0000', '#00308F', '#FF8042'];
+const COLORS = ['#3457D5', '#1877F2', '#00308F', '#FF8042'];
 const colors = ["#1877F2", "#3457D5", "#00308F"];
 
 
@@ -116,7 +115,7 @@ const Dashboard: React.FC = () => {
 
   const callComplexityData = [
     { name: 'Easy', value: dashboardData.complexity.easy },
-    { name: 'Medium', value: dashboardData.complexity.intermediate },
+    { name: 'Intermediate', value: dashboardData.complexity.intermediate },
     { name: 'Difficult', value: dashboardData.complexity.difficult },
   ];
 
@@ -248,7 +247,7 @@ const Dashboard: React.FC = () => {
             </FormControl>
           </Box>
         </Box>
-        <Button sx={{ height: '30px', bgcolor: '#0c0c0c', fontSize: '10px' }} variant="contained" ><TableChartIcon sx={{ marginRight:'5px', height: '15px' }} />
+        <Button sx={{ height: '30px', bgcolor: '#0c0c0c', fontSize: '10px' }} variant="contained" ><Download sx={{ height: '15px' }} />
           Table View
         </Button>
       </Box>
@@ -354,7 +353,7 @@ const Dashboard: React.FC = () => {
                     <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} />
                     <Tooltip />
-                    {/* <Legend wrapperStyle={{ fontSize: "10px" }} /> */}
+                    <Legend wrapperStyle={{ fontSize: "10px" }} />
                     <Bar dataKey="value" barSize={40}>
                       {chart.data.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
