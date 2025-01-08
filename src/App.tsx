@@ -9,7 +9,9 @@ import ChatbotPage from './pages/ChatbotPage';
 import LoginPage from './pages/LoginPage';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { Outlet } from 'react-router-dom';
-import DataTable from './pages/TableView';
+import CombinedDashboard from './pages/TableView';
+import { UploadProvider } from './context/FileContext';
+import TableData from './pages/TableView';
 
 const theme = createTheme({
   palette: {
@@ -33,23 +35,22 @@ function AppContent() {
         path="/login"
         element={!isAuthenticated ? <LoginPage /> : <Navigate to="/upload" replace />}
       />
-      <Route
-        element={
-          isAuthenticated ? (
-            <Layout onLogout={logout}> {/* Pass the onLogout to Layout */}
-              <Outlet />
-            </Layout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      >
-        <Route path="/upload" element={<ProtectedRoute element={<UploadPage />} />} />
-        <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
-        <Route path="/chatbot" element={<ProtectedRoute element={<ChatbotPage />} />} />
-        <Route path="/login" element={<ProtectedRoute element={<LoginPage />} />} />
-        <Route path="/tableview" element={<ProtectedRoute element={<DataTable />} /> } />
-      </Route>
+      {isAuthenticated && (
+        <Route
+          element={
+            <UploadProvider>
+              <Layout onLogout={logout}>
+                <Outlet />
+              </Layout>
+            </UploadProvider>
+          }
+        >
+          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/chatbot" element={<ChatbotPage />} />
+          <Route path="/tableview" element={<TableData />} />
+        </Route>
+      )}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
@@ -69,3 +70,4 @@ function App() {
 }
 
 export default App;
+

@@ -1,14 +1,11 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
   Button,
   CircularProgress,
-  Menu,
-  MenuItem,
   Paper,
   List,
   ListItem,
@@ -27,7 +24,6 @@ import {
   CardContent,
   CardActions,
   Tooltip,
-  // IconButton,
 } from '@mui/material';
 import {
   CloudUpload,
@@ -44,11 +40,13 @@ import {
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
 import DialogContentComponent from '../components/DialogContent';
+import { useUpload } from '../context/FileContext';
 
 interface FileUpload {
   file: File;
   progress: number;
   status: 'Ready' | 'uploading' | 'success' | 'error' | 'processing';
+  name: string;
 }
 
 interface TranscriptResponse {
@@ -59,14 +57,12 @@ interface TranscriptResponse {
 }
 
 export default function UploadPage() {
-  const [files, setFiles] = useState<FileUpload[]>([]);
-  const [transcripts, setTranscripts] = useState<TranscriptResponse[]>([]);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [showTranscripts, setShowTranscripts] = useState(false);
+  console.log('UploadPage is rendering');
+  const location = useLocation();
+  const { files, setFiles, transcripts, setTranscripts, filesUploaded, setFilesUploaded } = useUpload();
   const [openTranscriptDialog, setOpenTranscriptDialog] = useState(false);
   const [selectedTranscript, setSelectedTranscript] = useState('');
   const [loadingTranscripts, setLoadingTranscripts] = useState(false);
-  const [filesUploaded, setFilesUploaded] = useState(false);
   const [open, setOpen] = useState(false);
   const [alert, setAlert] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
@@ -76,15 +72,25 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const batchFileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    console.log('UploadPage mounted');
+    return () => {
+      console.log('UploadPage unmounted');
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log('UploadPage state updated:', { files, transcripts, filesUploaded, pathname: location.pathname });
+  }, [files, transcripts, filesUploaded, location.pathname]);
+
   const showTranscript = (transcript: string) => {
     setSelectedTranscript(transcript);
     setOpenTranscriptDialog(true);
   };
 
-  const downloadAllTranscriptsAsZip = async (transcripts: any[]) => {
+  const downloadAllTranscriptsAsZip = async (transcripts: TranscriptResponse[]) => {
     const zip = new JSZip();
 
-    // Add each transcript to the ZIP
     transcripts.forEach(transcript => {
       if (transcript.status === 'completed' && transcript.transcript) {
         zip.file(`${transcript.filename}.txt`, transcript.transcript);
@@ -92,10 +98,8 @@ export default function UploadPage() {
     });
 
     try {
-      // Generate the ZIP file as a Blob
       const zipBlob = await zip.generateAsync({ type: 'blob' });
 
-      // Prompt the user to choose a save location
       if ('showSaveFilePicker' in window) {
         const handle = await (window as any).showSaveFilePicker({
           suggestedName: 'transcripts.zip',
@@ -137,19 +141,12 @@ export default function UploadPage() {
     }
   };
 
-
-  const handleBrowseClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    // setAnchorEl(event.currentTarget);
-    handleOpen();
+  const handleBrowseClick = () => {
+    setOpen(true);
   };
 
   const handleClose = () => {
-    // setAnchorEl(null);
     setOpen(false);
-  };
-
-  const handleOpen = () => {
-    setOpen(true);
   };
 
   const handleSingleUpload = () => {
@@ -172,14 +169,16 @@ export default function UploadPage() {
       return;
     }
 
-    const newFiles = acceptedFiles.map(file => ({
-      file,
-      progress: 0,
-      status: 'Ready' as const,
-    }));
-
-    setFiles(prev => [...prev, ...newFiles]);
-  }, [files]);
+    setFiles(prevFiles => {
+      const newFiles = acceptedFiles.map(file => ({
+        file,
+        progress: 0,
+        status: 'Ready' as const,
+        name: file.name,
+      }));
+      return [...prevFiles, ...newFiles];
+    });
+  }, [files, setFiles]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -191,99 +190,34 @@ export default function UploadPage() {
     noClick: true,
   });
 
-  // const handleUpload = async () => {
-  //   const pendingFiles = files.filter(f => f.status === 'pending');
-  //   console.log(files)
-  //   for (const fileUpload of pendingFiles) {
-  //     const formData = new FormData();
-  //     formData.append('files', fileUpload.file);
-  //     console.log(formData);
-  //     try {
-  //       setFiles(prev => prev.map(f =>
-  //         f.file === fileUpload.file
-  //           ? { ...f, status: 'uploading' }
-  //           : f
-  //       ));
-
-  //       const response = await axios.post('http://localhost:8000/upload', formData, {
-  //         onUploadProgress: (progressEvent) => {
-  //           if (progressEvent.total) {
-  //             const progress = (progressEvent.loaded / progressEvent.total) * 100;
-  //             setFiles(prev => prev.map(f => 
-  //               f.file === fileUpload.file 
-  //                 ? { ...f, progress: Math.round(progress) }
-  //                 : f
-  //             ));
-  //           }
-  //         },
-  //       });
-
-  //       setFiles(prev => prev.map(f =>
-  //         f.file === fileUpload.file
-  //           ? { ...f, status: 'success' }
-  //           : f
-  //       ));
-
-  //       setAlert({
-  //         show: true,
-  //         message: 'File uploaded successfully!',
-  //         type: 'success'
-  //       });
-  //     } catch (error) {
-  //       setFiles(prev => prev.map(f =>
-  //         f.file === fileUpload.file
-  //           ? { ...f, status: 'error' }
-  //           : f
-  //       ));
-
-  //       setAlert({
-  //         show: true,
-  //         message: 'Error uploading file. Please try again.',
-  //         type: 'error'
-  //       });
-  //     }
-  //   }
-  // };
-
   const handleUpload = async () => {
     const pendingFiles = files.filter(f => f.status === 'Ready');
-    console.log(files);
+    console.log('Files to upload:', pendingFiles);
 
-    // Create a new FormData object to send all files in one request
     const formData = new FormData();
 
-    // Append all pending files to the form data
     pendingFiles.forEach(fileUpload => {
       formData.append('files', fileUpload.file);
     });
 
-    // Start updating the status for all files to 'uploading'
-    setFiles(prev => prev.map(f =>
-      f.status === 'Ready'
-        ? { ...f, status: 'uploading' }
-        : f
+    setFiles(prevFiles => prevFiles.map(f =>
+      f.status === 'Ready' ? { ...f, status: 'uploading' } : f
     ));
 
     try {
-      // Send the FormData to the backend as a single request
       const response = await axios.post('http://localhost:8000/upload', formData, {
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const progress = (progressEvent.loaded / progressEvent.total) * 100;
-            setFiles(prev => prev.map(f =>
-              f.status === 'uploading'
-                ? { ...f, progress: Math.round(progress) }
-                : f
+            setFiles(prevFiles => prevFiles.map(f =>
+              f.status === 'uploading' ? { ...f, progress: Math.round(progress) } : f
             ));
           }
         },
       });
 
-      // Update the status of all files to 'success' after upload
-      setFiles(prev => prev.map(f =>
-        f.status === 'uploading'
-          ? { ...f, status: 'success' }
-          : f
+      setFiles(prevFiles => prevFiles.map(f =>
+        f.status === 'uploading' ? { ...f, status: 'success' } : f
       ));
 
       setAlert({
@@ -291,12 +225,10 @@ export default function UploadPage() {
         message: 'Files uploaded successfully!',
         type: 'success'
       });
+      setFilesUploaded(true);
     } catch (error) {
-      // Update status for all files to 'error' if there's any failure
-      setFiles(prev => prev.map(f =>
-        f.status === 'uploading'
-          ? { ...f, status: 'error' }
-          : f
+      setFiles(prevFiles => prevFiles.map(f =>
+        f.status === 'uploading' ? { ...f, status: 'error' } : f
       ));
 
       setAlert({
@@ -306,7 +238,6 @@ export default function UploadPage() {
       });
     }
   };
-
 
   const handleGenerateTranscripts = async () => {
     try {
@@ -319,7 +250,6 @@ export default function UploadPage() {
       });
 
       setTranscripts(response.data);
-      setShowTranscripts(true);
     } catch (error) {
       setAlert({
         show: true,
@@ -331,10 +261,8 @@ export default function UploadPage() {
     }
   };
 
-  const isGenerateButtonDisabled = files.some(file => file.status === 'uploading' || file.status === 'processing');
-
   const removeFile = (fileToRemove: File) => {
-    setFiles(prev => prev.filter(f => f.file !== fileToRemove));
+    setFiles(prevFiles => prevFiles.filter(f => f.file !== fileToRemove));
   };
 
   return (
@@ -344,8 +272,9 @@ export default function UploadPage() {
         height: '40px',
         color: 'white',
         fontSize: '16px',
-        marginTop: '-15px',
         p: 2,
+        marginBottom: '10px',
+        marginTop: '-15px',
         borderRadius: 1,
         display: 'flex',
         alignItems: 'center',
@@ -354,48 +283,6 @@ export default function UploadPage() {
         <CloudUpload />
         Upload Files
       </Typography>
-
-      {/* {files.length > 0 && (
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Files (add up to 5 files)
-          </Typography>
-          <List>
-            {files.map((fileUpload, index) => (
-              <ListItem key={index}>
-                <ListItemIcon>
-                  <AudioFile sx = {{color: '#007AFF'}}/>
-                </ListItemIcon>
-                <ListItemText 
-                  primary={fileUpload.file.name}
-                  secondary={
-                    fileUpload.status === 'uploading' ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={fileUpload.progress} 
-                          sx={{ flexGrow: 1 }}
-                        />
-                        <Typography variant="body2">
-                          {`${fileUpload.progress}%`}
-                        </Typography>
-                      </Box>
-                    ) : fileUpload.status === 'success' ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main' }}>
-                        <Check sx={{ mr: 0.5 }} />
-                        Uploaded successfully!
-                      </Box>
-                    ) : fileUpload.status
-                  }
-                />
-                <IconButton onClick={() => removeFile(fileUpload.file)}>
-                  <Close />
-                </IconButton>
-              </ListItem>
-            ))}
-          </List>
-        </Box>
-      )} */}
 
       {files.length > 0 && (
         <Box sx={{ mb: 4 }}>
@@ -468,10 +355,7 @@ export default function UploadPage() {
           <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
             <Button
               variant="contained"
-              onClick={() => {
-                handleUpload();
-                setFilesUploaded(true); // Enable other buttons after upload
-              }}
+              onClick={handleUpload}
               disabled={!files.some(f => f.status === 'Ready' || f.status === 'uploading')}
               sx={{
                 backgroundColor: '#6800E0',
@@ -517,9 +401,8 @@ export default function UploadPage() {
             </Button>
           </Box>
         </Box>
-
-
       )}
+
       {transcripts.length > 0 && (
         <Box sx={{ mt: 4, marginBottom: '30px', bgcolor: '#f0f0f0', padding: '30px', borderRadius: '10px' }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -610,7 +493,6 @@ export default function UploadPage() {
             </DialogActions>
           </Dialog>
 
-
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', marginTop: '30px' }}>
             <Button
               variant="contained"
@@ -645,9 +527,10 @@ export default function UploadPage() {
           p: 6,
           textAlign: 'center',
           cursor: 'pointer',
-          border: '2px dashed #ccc',
+          border: '2px dashed #6800E0',
           borderRadius: 2,
-          '&:hover': { borderColor: 'purple' }
+          bgcolor: 'white',
+          '&:hover': { borderColor: '#4a00a0' }
         }}
       >
         <input {...getInputProps()} />
@@ -742,7 +625,6 @@ export default function UploadPage() {
         </Typography>
       </Paper>
 
-
       <Snackbar
         open={alert.show}
         autoHideDuration={6000}
@@ -755,3 +637,4 @@ export default function UploadPage() {
     </Box>
   );
 }
+
